@@ -34,8 +34,13 @@ class AlienInvasion:
             self._check_events()
             self.ship.update()
             self._update_bullets()
+            self._update_aliens()
             self._update_screen()
             
+
+    def _update_aliens(self):
+        self._check_fleet_edges()
+        self.aliens.update()
 
     def _update_bullets(self):
         self.bullets.update()
@@ -82,6 +87,17 @@ class AlienInvasion:
             self.ship.moving_up = False
         elif event.key == pygame.K_s:
             self.ship.moving_down = False
+
+    def _check_fleet_edges(self):
+        for alien in self.aliens.sprites():
+            if alien.check_edges():
+                self._change_fleet_direction()
+                break
+
+    def _change_fleet_direction(self):
+        for alien in self.aliens.sprites():
+            alien.rect.y += self.settings.fleet_drop_speed
+        self.settings.fleet_direction *= -1
 
     def _create_fleet(self):
         alien = Alien(self)
