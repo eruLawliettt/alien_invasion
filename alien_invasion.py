@@ -4,6 +4,9 @@ from settings import Settings
 from ship.ship import Ship
 from ship.bullet import Bullet
 from alien.alien import Alien
+from time import sleep
+from game_stats import GameStats
+
 
 class AlienInvasion:
 
@@ -21,6 +24,8 @@ class AlienInvasion:
         
         pygame.display.set_caption('Alien Invasion')
 
+        self.stats = GameStats(self)
+
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
         self.aliens = pygame.sprite.Group()
@@ -32,21 +37,60 @@ class AlienInvasion:
 
         while True:
             self._check_events()
-            self.ship.update()
-            self._update_bullets()
-            self._update_aliens()
+
+            if self.stats.ga:
+                self.ship.update()
+                self._update_bullets()
+                self._update_aliens()
+
             self._update_screen()
             
+
+    def _ship_hit(self):
+        if self.stats.ships_left > 0:
+            self.stats.ships_left -= 1
+
+            self.aliens.empty()
+            self.bullets.empty()
+
+            self._create_fleet()
+            self.ship.center_ship()
+
+            sleep(1)
+        else:
+            self.stats.ga = False
+
+    def _check_aliens_bottom(self):
+        screen_rect = self.screen.get_rect()
+        for alien in self.aliens.sprites():
+            if alien.rect.bottom >= screen_rect.bottom:
+                self._ship_hit()
+                break
 
     def _update_aliens(self):
         self._check_fleet_edges()
         self.aliens.update()
 
+        if pygame.sprite.spritecollideany(self.ship, self.aliens):
+            self._ship_hit()
+
+        self._check_aliens_bottom()
+
     def _update_bullets(self):
         self.bullets.update()
         for bullet in self.bullets.copy():
             if bullet.rect.bottom < 0:
-                self.bullets.remove(bullet)  
+                self.bullets.remove(bullet)
+
+        self._check_bullet_alien_collision()
+
+    def _check_bullet_alien_collision(self):
+
+        pygame.sprite.groupcollide(self.bullets, self.aliens, True, True)  
+
+        if not self.aliens:
+            self.bullets.empty()
+            self._create_fleet()
 
     def _check_events(self):
         for event in pygame.event.get():
@@ -77,7 +121,7 @@ class AlienInvasion:
         if len(self.bullets) < self.settings.bullets_allowed:
             new_bullet = Bullet(self)
             self.bullets.add(new_bullet)
-
+    
     def _check_keyup_events(self, event):
         if event.key == pygame.K_d:
             self.ship.moving_right = False
